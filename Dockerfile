@@ -2,7 +2,13 @@ FROM centos:7.2.1511
 
 LABEL Author="Pad0y<github.com/Pad0y>"
 
-ENV LANG C.UTF-8 LC_ALL=C.UTF-8
+RUN yum install kde-l10n-Chinese -y
+RUN yum install glibc-common -y
+RUN localedef -c -f UTF-8 -i zh_CN zh_CN.utf8
+RUN export LANG=zh_CN.UTF-8
+RUN echo "export LANG=zh_CN.UTF-8" >> /etc/locale.conf
+ENV LANG zh_CN.UTF-8
+ENV LC_ALL zh_CN.UTF-8
 
 COPY . /data/project/
 WORKDIR /data/project/
@@ -23,7 +29,6 @@ RUN pip3 install --user  -U pip -i https://pypi.tuna.tsinghua.edu.cn/simple/  \
 
 RUN source ~/.bash_profile && pip3 install -r requirements.txt
 
-EXPOSE 5000
-EXPOSE 8000
+EXPOSE 8089
 
 CMD python3 backend/main.py
