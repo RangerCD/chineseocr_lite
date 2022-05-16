@@ -111,6 +111,8 @@ class TrRun(tornado.web.RequestHandler):
         else:
             request_time[remote_ip_now] += 1
 
+        img_w, img_h = img.size
+
         if compress_size is not None:
             try:
                 compress_size = int(compress_size)
@@ -122,14 +124,14 @@ class TrRun(tornado.web.RequestHandler):
                 # return
 
             short_size = compress_size
-            if short_size < 64:
+            if short_size == 0:
+                short_size = min(img_w, img_h)
+            elif short_size < 64:
                 res.append("短边尺寸过小，请调整短边尺寸")
                 do_det = False
 
             short_size = 32 * (short_size//32)
 
-
-        img_w, img_h = img.size
         if max(img_w, img_h) * (short_size * 1.0 / min(img_w, img_h)) > dbnet_max_size:
             # logger.error(exc_info=True)
             res.append("图片reize后长边过长，请调整短边尺寸")
