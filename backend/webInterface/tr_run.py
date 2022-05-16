@@ -50,6 +50,12 @@ class TrRun(tornado.web.RequestHandler):
         img_up = self.request.files.get('file', None)
         img_b64 = self.get_argument('img', None)
         compress_size = self.get_argument('compress', None)
+        show = self.get_argument('show', 'True')
+
+        try:
+            show = show.lower() in ('true', 't', '1')
+        except ValueError as ex:
+            show = True
 
         # 判断是上传的图片还是base64
         self.set_header('content-type', 'application/json')
@@ -148,28 +154,30 @@ class TrRun(tornado.web.RequestHandler):
             img_draw = ImageDraw.Draw(img_detected)
             colors = ['red', 'green', 'blue', "purple"]
 
-            for i, r in enumerate(res):
-                rect, txt, confidence = r
+            if show:
+                for i, r in enumerate(res):
+                    rect, txt, confidence = r
 
-                x1,y1,x2,y2,x3,y3,x4,y4 = rect.reshape(-1)
-                size = max(min(x2-x1,y3-y2) // 2 , 20 )
+                    x1,y1,x2,y2,x3,y3,x4,y4 = rect.reshape(-1)
+                    size = max(min(x2-x1,y3-y2) // 2 , 20 )
 
-                myfont = ImageFont.truetype("仿宋_GB2312.ttf", size=size)
-                fillcolor = colors[i % len(colors)]
-                img_draw.text((x1, y1 - size ), str(i+1), font=myfont, fill=fillcolor)
-                for xy in [(x1, y1, x2, y2), (x2, y2, x3, y3 ), (x3 , y3 , x4, y4), (x4, y4, x1, y1)]:
-                    img_draw.line(xy=xy, fill=colors[i % len(colors)], width=2)
+                    myfont = ImageFont.truetype("仿宋_GB2312.ttf", size=size)
+                    fillcolor = colors[i % len(colors)]
+                    img_draw.text((x1, y1 - size ), str(i+1), font=myfont, fill=fillcolor)
+                    for xy in [(x1, y1, x2, y2), (x2, y2, x3, y3 ), (x3 , y3 , x4, y4), (x4, y4, x1, y1)]:
+                        img_draw.line(xy=xy, fill=colors[i % len(colors)], width=2)
 
-            output_buffer = BytesIO()
-            img_detected.save(output_buffer, format='JPEG')
-            byte_data = output_buffer.getvalue()
-            img_detected_b64 = base64.b64encode(byte_data).decode('utf8')
+                output_buffer = BytesIO()
+                img_detected.save(output_buffer, format='JPEG')
+                byte_data = output_buffer.getvalue()
+                img_detected_b64 = base64.b64encode(byte_data).decode('utf8')
         
         else:
-            output_buffer = BytesIO()
-            img.save(output_buffer, format='JPEG') 
-            byte_data = output_buffer.getvalue()
-            img_detected_b64 = base64.b64encode(byte_data).decode('utf8')
+            if show:
+                output_buffer = BytesIO()
+                img.save(output_buffer, format='JPEG')
+                byte_data = output_buffer.getvalue()
+                img_detected_b64 = base64.b64encode(byte_data).decode('utf8')
 
         log_info = {
             'ip': self.request.remote_ip,
@@ -177,9 +185,19 @@ class TrRun(tornado.web.RequestHandler):
             'time': time_now
         }
         logger.info(json.dumps(log_info, cls=NpEncoder))
+        result = {
+            'code': 200,
+            'msg': '成功',
+            'data': {
+                # 'img_detected': 'data:image/jpeg;base64,' + img_detected_b64,
+                'raw_out': res,
+                'speed_time': round(time.time() - start_time, 2)
+            }
+        }
+        if show:
+            result['data']['img_detected'] = 'data:image/jpeg;base64,' + img_detected_b64
         self.finish(json.dumps(
-            {'code': 200, 'msg': '成功',
-             'data': {'img_detected': 'data:image/jpeg;base64,' + img_detected_b64, 'raw_out': res,
-                      'speed_time': round(time.time() - start_time, 2)}},
-            cls=NpEncoder))
+            result,
+            cls=NpEncoder)
+        )
         return
