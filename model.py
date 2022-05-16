@@ -68,7 +68,7 @@ class  OcrHandle(object):
                 continue
 
             if simPred.strip() != '':
-                results.append([tmp_box,"{}、 ".format(count)+  simPred,score])
+                results.append([tmp_box, simPred, score])
                 count += 1
 
         return results
